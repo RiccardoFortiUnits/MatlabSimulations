@@ -1,9 +1,11 @@
-P = 0.3;
-I = 0.002;
+P = 0.01;
+I = 0.00005;
+totalGain = db2pow(18.4);
 alpha = 0.9998;
 fs = 1/8e-9;
 nDelay = 319;
 sys = tf([P -P+I], [1 -alpha], 1/fs);
+sys = totalGain * sys;
 
 frequencies = logspace(0, 8, 1000); % Adjust the range as needed
 
@@ -23,7 +25,7 @@ semilogx(frequencies,phase)
 hold on
 semilogx(frequencies,instabilityCurve)
 
-semilogx(frequencies(intersections),instabilityCurve(intersections), 'go', 'MarkerSize', 10)
+semilogx(frequencies(intersections),phase(intersections), 'go', 'MarkerSize', 10)
 
 hold off
 

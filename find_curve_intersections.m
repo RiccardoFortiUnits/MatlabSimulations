@@ -6,8 +6,11 @@ end
 if isrow(curve2)
     curve2 = curve2';
 end
+
+f = curve1 - curve2;
+
 % Find indices where the two curves intersect
-intersection_indices = find(curve1(1:end) == curve2(1:end) | [xor(curve1(1:end-1) > curve2(1:end-1), curve1(2:end) > curve2(2:end));false]);
+intersection_indices = find(f == 0 | [f(1:end-1) .* f(2:end) < 0;false]);
 
 % Plot the curves and intersections for visualization
 % figure;

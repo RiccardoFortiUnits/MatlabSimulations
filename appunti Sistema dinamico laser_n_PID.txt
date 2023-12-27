@@ -1,0 +1,63 @@
+														Sistema dinamico laser_n_PID
+
+frequenza di campionamento del sistema a tempo discreto: 125MHz (frequenza dell'FPGA della red pitaya)
+
+circuito tia
+	guadagno ampiezzaLaser->tensione uscita = 0.2 * 5600 * 200
+	filtro passaAlto
+		frequenza di taglio: ????????
+		traslato in tempo discreto diventa (z - alpha) / (z - 1), con alpha = e^(-2πfc/fs)
+
+	funz di trasferimento:
+		G(z) = 224e3 * (z - 1) / (z - alpha)
+
+PID (D non usato)
+	funz di trasferimento:
+		G(z) = (Pz + I - P) / (z - 1)
+
+Modulatore + amplificatore + AOM
+	funzione di trasferimento (da tensione d'uscita del PID all'ampiezza del laser in entrata al circuito tia) approssimata come guadagno e delay
+		G(z) = 3e-4 * z^-319 (ricontrolla il guadagno)
+	ci sarà senz'altro qualche effetto filtrante, ma per il momento non lo consideriamo
+
+						input noise(of the entire system mod+amp+AOM+laser+tia) (but the noise we measured was after the tia, there's no need to put it before the tia, it would get filtered "twice"...
+						   │													we need to separate the tia noise from the laser noise)
+						   │								ADC + DAC noise
+						   │	┌────────>out					│
+						   V	│								V
+	mod+amp+AOM ─────────> + ───┴───> tia ──────> PID ────────> +
+		^														│
+		│														│
+		│														│
+		└───────────────────────────────────────────────────────┘
+
+
+consideriamo il sistema con uscita dopo mod+amp+AOM: loop di feedback con A(z) = tia*PID*(mod+amp+AOM):
+	A(z) = 70 * (Pz + I - P) / (z - alpha)				controlla guadagno
+	B(z) = 1
+	delay(z) = z^-319
+x──> + ────> A ─────┬──> y
+	 ^				│
+	 │				│
+	 └── -z^-del <──┘			Y = X*A - Y * z^-del * A	=>
+
+Y/X = A / (1 + z^-del * A) = z^del * A / (Z^del + A)
+con A = N / D, il sistema ha
+	zeri di N,
+	"del" zeri in z=0
+	poli in D*z^del + N
+
+=>
+	zeri in
+		(P-I)/P
+		0 (grado 319)
+
+	poli della funzione
+		(Pz + I - P) * z^319 + z - alpha = P*z^320 + (I-P)*z^319 + z - alpha
+
+todo
+	effetto dell'highpass. Se si toglie (si deve togliere anche la componente continua del modulatore), cambia molto?
+	scrivi estensione del margine di fase
+	può valere la pena fare l'analisi sul sistema effettivo (A = 1, B = ...)?
+	
+
