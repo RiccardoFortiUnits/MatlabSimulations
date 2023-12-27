@@ -1,5 +1,5 @@
-P = 0.1;
-Z = 0.02;
+P = 0.3;
+I = 0.002;
 alpha = 0.9998;
 fs = 1/8e-9;
 nDelay = 319;
@@ -11,8 +11,21 @@ frequencies = logspace(0, 8, 1000); % Adjust the range as needed
 [magnitude, phase] = bode(sys, frequencies);
 magnitude = squeeze(magnitude);
 phase = squeeze(phase);
+%with a delay, the phase at which the output of the system is in
+%counterphase to respect to the input is shifted:
+%total delay of the closed loop system = delay + openLoopSysPhase(f)/(2*pi*f/fs)
+%delay at which the magnitude has to be < 0dB to have stability = 1 / (2*f/fs)
+%=> let's check the frequencies at which openLoopSysPhase == pi-2*pi*f*delay
+instabilityCurve = 180 - 360*frequencies/fs*nDelay;
+instabilityCurve = mod(instabilityCurve + 180, 360) - 180;
+intersections = find_curve_intersections(phase, instabilityCurve);
 semilogx(frequencies,phase)
 hold on
-% semilogx(frequencies,(180-360*frequencies/fs*nDelay))
-semilogx(frequencies,mod((180-360*frequencies/fs*nDelay) + 180, 360) - 180)
+semilogx(frequencies,instabilityCurve)
+
+semilogx(frequencies(intersections),instabilityCurve(intersections), 'go', 'MarkerSize', 10)
+
 hold off
+
+pointsToCheck = magnitude(intersections);
+pointsToCheck(pointsToCheck >= 1)
