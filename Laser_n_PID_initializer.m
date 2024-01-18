@@ -1,6 +1,7 @@
 highPassFilter_RC = 2.8e-4;%3.5e3;
-P = 0.0;
-I = 0.01;
+P = 1;
+I = 0.003;
+setPoint = -0.87;
 fsampling = 125e6;
 nDelay = 150;
 
