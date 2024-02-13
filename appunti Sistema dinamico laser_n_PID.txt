@@ -59,5 +59,13 @@ todo
 	effetto dell'highpass. Se si toglie (si deve togliere anche la componente continua del modulatore), cambia molto?
 	scrivi estensione del margine di fase
 	può valere la pena fare l'analisi sul sistema effettivo (A = 1, B = ...)?
-	
+	effetto degli elementi a tempo continuo del sistema, non sono approssimabili così facilmente (vedi zeri aggiunti dal delay, che non sono in 0 se si usa un filtro a tempo continuo)
 
+
+
+
+mixer
+	delay ~0 (<10ns)
+	output highly nonlinear
+	max RF power = 50mW => uber max RF voltage generated (on 50Ohm) = 1.58V
+	max IF current = 40mA => uber max IF voltage (from generator) = 2V

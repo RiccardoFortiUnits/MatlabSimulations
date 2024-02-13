@@ -3,7 +3,7 @@ P = 1;
 I = 0.003;
 setPoint = -0.87;
 fsampling = 125e6;
-nDelay = ceil(350*.5);
+nDelay = ceil(350*.25);
 
 initialWaitTime = 8e-4;
 
