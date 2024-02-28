@@ -16,7 +16,7 @@ actualLaserNoise(:,2) = (actualLaserNoise(:,2) - mean(actualLaserNoise(:,2))) / 
 laserNoiseAvg = mean(actualLaserNoise(:,2));
 fNoiseSampling = 1 / (rpFloor(2,1) - rpFloor(1,1));
 
-
+tia3_C_feedback = 10e-12;
 tia3_g1 = 20e3;
 tia3_g2 = 4.9;
 
