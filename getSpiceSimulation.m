@@ -1,8 +1,21 @@
 function [x, y] = getSpiceSimulation(NetFilePath, netLable, varargin)
     ltSpiceFilePath = "C:\Users\lastline\AppData\Local\Programs\ADI\LTspice\LTspice.exe";
     
+    [folder, name, ~] = fileparts(NetFilePath);
+    rawFilePath = fullfile(folder, name) + ".raw";
+
     if ~isempty(varargin)
-        text = fileread(NetFilePath);
+        try
+            text = fileread(NetFilePath);
+        catch
+            ascFilePath = fullfile(folder, name) + ".asc";
+            if(isfile(ascFilePath))
+                system('"' + ltSpiceFilePath + '" -netlist "' + ascFilePath + '"');
+                text = fileread(NetFilePath);
+            else
+                print("files " + fullfile(folder, name) + "not found!!!");
+            end
+        end
         finalTextPosition = strfind(text, ".backanno");%let's add undefined parameter commands here
         finalPart = text(finalTextPosition:end);
         text = text(1:finalTextPosition - 1);
@@ -34,10 +47,8 @@ function [x, y] = getSpiceSimulation(NetFilePath, netLable, varargin)
     end
 
 
-    [folder, name, ~] = fileparts(NetFilePath);
-    rawFilePath = fullfile(folder, name)+".raw";
 
-    system('"' + ltSpiceFilePath + '" -ascii -b "' + NetFilePath + '"');
+    system('"' + ltSpiceFilePath + '" -b "' + NetFilePath + '"');
     rawData = LTspice2Matlab(rawFilePath);
     
     if isfield(rawData, 'freq_vect')

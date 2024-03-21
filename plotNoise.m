@@ -6,12 +6,11 @@ function plotNoise(f, H)
     figure;
     
     % Plot the magnitude
-    semilogx(f, magnitude);
+    loglog(f, magnitude);
     title('Noise');
     xlabel('Frequency (Hz)');
     ylabel('NSD (V/√Hz)');
     xlim([min(f), max(f)]);
-    ylim([min(H), max(H)]);
     grid on;
     
 end

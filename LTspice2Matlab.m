@@ -126,16 +126,16 @@ function raw_data = LTspice2Matlab( filename, varargin )
 
     raw_data = [];  %Initialize the output structure.
 
-    if nargin==0,
+    if nargin==0
         error( 'LTspice2Matlab takes 1, 2, or 3 input parameters.  Type "help LTspice2Matlab" for details' );
-    elseif nargin==1,
+    elseif nargin==1
         selected_vars = 'all';
         downsamp_N = 1;
-    elseif nargin==2,
+    elseif nargin==2
         selected_vars = varargin{1};
         if ischar(selected_vars),  selected_vars = lower(selected_vars);  end
         downsamp_N = 1;
-    elseif nargin==3,
+    elseif nargin==3
         selected_vars = varargin{1};
         if ischar(selected_vars),  selected_vars = lower(selected_vars);  end
         downsamp_N = varargin{2};
@@ -144,60 +144,62 @@ function raw_data = LTspice2Matlab( filename, varargin )
     end
     
     
-    if length(downsamp_N)~=1 | ~isnumeric(downsamp_N) | isnan(downsamp_N) | mod(downsamp_N,1)~=0.0 | downsamp_N<=0,
+    if length(downsamp_N)~=1 | ~isnumeric(downsamp_N) | isnan(downsamp_N) || mod(downsamp_N,1)~=0.0 || downsamp_N<=0
         error( 'Optional parameter DOWNSAMP_N must be a positive integer >= 1' );
     end
     
     
     filename = strtrim(filename);   %Remove leading and trailing spaces from filename.
-	fid = fopen(filename, 'rb');
-    if length(fid)==1 & isnumeric(fid) & fid==-1,
+    fid = fopen(filename, 'rb');
+    if length(fid)==1 & isnumeric(fid) & fid==-1
         %try to append ".raw" to the file name ...
         fid = fopen(sprintf( '%s.raw', filename ), 'rb');
-        if length(fid)==1 & isnumeric(fid) & fid==-1,
-            error( sprintf( 'Could not open file "%s"', filename ) );
+        if length(fid)==1 & isnumeric(fid) & fid==-1
+            error( 'Could not open file "%s"', filename );
         end
     end
        
     
-	[filename, the_permision, machineformat] = fopen(fid);
+    [filename, ~, machineformat] = fopen(fid);
 
     %Load header tags & information
     variable_name_list = {};  variable_type_list = {};   %These include voltages and currents only.  Does not include the time vector.
     variable_flag = 0;
     file_format = '';
-    while 1,   
+    while 1   
         the_line = fgetl(fid);
-        % if all(the_line(1:2:end) == char(0))
-        %     the_line(1:2:end) = [];
-        % elseif all(the_line(2:2:end) == char(0))
-        %     the_line(2:2:end) = [];
-        % end
-        if length(the_line)==1 & isnumeric(the_line) & double(the_line)==-1,  
-            try fclose( fid );  catch  end
-            error( sprintf( 'Format error in LTspice file "%s" ... End of file unexpectedly encountered', filename ));
+        the_line(the_line == char(0)) = [];
+        if length(the_line)==1 & isnumeric(the_line) & double(the_line)==-1  
+            try fclose( fid );  
+            catch  
+            end
+            error( 'Format error in LTspice file "%s" ... End of file unexpectedly encountered', filename );
         end
         
         the_line = char(the_line);
         
-        if length(strfind( the_line, 'Binary:' ))~=0,  file_format = 'binary';  break;  end
-        if length(strfind( the_line, 'Values:' ))~=0,  file_format = 'ascii';   break;  end
+        if contains( the_line, 'Binary:' ),  file_format = 'binary';  break;  end
+        if contains( the_line, 'Values:' ),  file_format = 'ascii';   break;  end
         
-        if variable_flag==0,  %Non-variable header section
-            if length(the_line)==0,  colon_index = [];
+        if variable_flag==0  %Non-variable header section
+            if isempty(the_line),  colon_index = [];
             else,  colon_index = find( the_line == ':' );  end
-            if length(colon_index)==0,  
-                try fclose( fid );  catch end
-                error( sprintf( 'Format error in LTspice file "%s"', filename ));  
+            if isempty(colon_index)  
+                try fclose( fid );  
+                catch 
+                end
+                error( 'Format error in LTspice file "%s"', filename );  
             end
             var_name = the_line(1:(colon_index(1)-1));
             var_value = strtrim(the_line((colon_index(1)+1):end));
 
-            vn_keep_index = find( var_name~=' ' & var_name~='.' & var_name~=char(9) & var_name~=newline & var_name~=char(13) );
+            vn_keep_index =  var_name~=' ' & var_name~='.' & var_name~=char(9) & var_name~=newline & var_name~=char(13) ;
             var_name = lower(var_name(vn_keep_index));
-            if isempty(var_name) | (var_name(1)>='0' & var_name(1)<='9'),  
-                try fclose( fid );  catch end
-                error( sprintf('Format error in LTspice file "%s" ... Bad tag name found', filename ));  
+            if isempty(var_name) | (var_name(1)>='0' && var_name(1)<='9')  
+                try fclose( fid );  
+                catch 
+                end
+                error('Format error in LTspice file "%s" ... Bad tag name found', filename );  
             end
 
             if strcmpi( var_name, 'variables' ) | strcmpi( var_name, 'variable' ),  variable_flag = 1;  continue;  end
@@ -206,24 +208,30 @@ function raw_data = LTspice2Matlab( filename, varargin )
                 if isempty(value_try),  raw_data = setfield( raw_data, var_name, var_value );
                 else raw_data = setfield( raw_data, var_name, value_try );  end
             catch
-                try fclose( fid );  catch end
-                error( sprintf('Format error in LTspice file "%s" ... Bad tag name found', filename ));  
+                try fclose( fid );  
+                catch 
+                end
+                error('Format error in LTspice file "%s" ... Bad tag name found', filename );  
             end
             
         else  %Variable header section
             leading_ch_index = find( (the_line(1:end-1)==' ' | the_line(1:end-1)==char(9)) & (the_line(2:end)~=' ' & the_line(2:end)~=char(9)) );
-            if length(leading_ch_index)~=3,  
-                try fclose( fid );  catch end
-                error( sprintf('Format error in LTspice file "%s" ... Wrong number of columns in the variable define section', filename ));  
+            if length(leading_ch_index)~=3  
+                try fclose( fid );  
+                catch
+                end
+                error('Format error in LTspice file "%s" ... Wrong number of columns in the variable define section', filename );  
             end
             
-            part1 = fliplr(deblank(fliplr(deblank(the_line( (leading_ch_index(1)+1) : leading_ch_index(2) )))));
-            part2 = fliplr(deblank(fliplr(deblank(the_line( (leading_ch_index(2)+1) : leading_ch_index(3) )))));
+            part1 = strtrim(the_line( (leading_ch_index(1)+1) : leading_ch_index(2) ));
+            part2 = strtrim(the_line( (leading_ch_index(2)+1) : leading_ch_index(3) ));
             part3 = fliplr(deblank(fliplr(deblank(the_line( (leading_ch_index(3)+1) : end )))));
             
-            if str2num(part1)~=length(variable_name_list),  
-                try fclose( fid );  catch end
-                error( sprintf('Format error in LTspice file "%s" ... Inconsistency found in the variable define section', filename ));  
+            if str2num(part1)~=length(variable_name_list)  
+                try fclose( fid );  
+                catch
+                end
+                error('Format error in LTspice file "%s" ... Inconsistency found in the variable define section', filename );  
             end
             variable_name_list{end+1} = part2;
             variable_type_list{end+1} = part3;
@@ -233,10 +241,12 @@ function raw_data = LTspice2Matlab( filename, varargin )
     %Check raw_data structure for required fields
     expected_tags      = {'title', 'date', 'plotname', 'flags', 'novariables',   'nopoints'    };
     expected_tags_full = {'Title', 'Date', 'Plotname', 'Flags', 'No. Variables', 'No. Points'  };
-    for q=1:length(expected_tags),
-        if ~isfield( raw_data, lower(expected_tags{q}) ),  
-            try fclose( fid );  catch end
-            error( sprintf('Format error in LTspice file "%s" ... tag "%s" not found', filename, expected_tags_full{q} ));  
+    for q=1:length(expected_tags)
+        if ~isfield( raw_data, lower(expected_tags{q}) )  
+            try fclose( fid );  
+            catch
+            end
+            error('Format error in LTspice file "%s" ... tag "%s" not found', filename, expected_tags_full{q} );  
         end
     end
     
@@ -247,7 +257,7 @@ function raw_data = LTspice2Matlab( filename, varargin )
 
     if isfield( raw_data, 'command' ),  raw_data = rmfield( raw_data, 'command' );  end
     if isfield( raw_data, 'backannotation' ),  raw_data = rmfield( raw_data, 'backannotation' );  end
-    if isfield( raw_data, 'offset' ),  
+    if isfield( raw_data, 'offset' )  
         general_offset = raw_data.offset;  %(sec)
         raw_data = rmfield( raw_data, 'offset' );  
     else
@@ -259,48 +269,62 @@ function raw_data = LTspice2Matlab( filename, varargin )
     raw_data.variable_type_list = {variable_type_list{2:end}};
     
     simulation_type = '';
-    if     ~isempty(strfind( lower(raw_data.plotname), 'transient analysis' )),           simulation_type = '.tran';   %SUPPORTED
-    elseif ~isempty(strfind( lower(raw_data.plotname), 'ac analysis' )),                  simulation_type = '.ac';     %SUPPORTED
-    elseif ~isempty(strfind( lower(raw_data.plotname), 'noise spectral density - (v/hz½ or a/hz½)' )),                  simulation_type = '.noise';     %ADDED
-    elseif ~isempty(strfind( lower(raw_data.plotname), 'dc transfer characteristic' )),   simulation_type = '.dc';     %This is a DC sweep (Not supported)
-    elseif ~isempty(strfind( lower(raw_data.plotname), 'operating point' )),              simulation_type = '.op';     %This is a DC operating point (Not supported)
+    if     contains( lower(raw_data.plotname), 'transient analysis' ),           simulation_type = '.tran';   %SUPPORTED
+    elseif contains( lower(raw_data.plotname), 'ac analysis' ),                  simulation_type = '.ac';     %SUPPORTED
+    elseif contains( lower(raw_data.plotname), 'noise spectral density - (v/hz½ or a/hz½)' ),                  simulation_type = '.noise';     %ADDED
+    elseif contains( lower(raw_data.plotname), 'dc transfer characteristic' ),   simulation_type = '.dc';     %This is a DC sweep (Not supported)
+    elseif contains( lower(raw_data.plotname), 'operating point' ),              simulation_type = '.op';     %This is a DC operating point (Not supported)
     end
     
-    if isempty(simulation_type) | ~(strcmpi(simulation_type, '.tran') | strcmpi(simulation_type, '.ac') | strcmpi( simulation_type, '.noise' )),
-        try fclose( fid );  catch end
+    if isempty(simulation_type) | ~(strcmpi(simulation_type, '.tran') | strcmpi(simulation_type, '.ac') | strcmpi( simulation_type, '.noise' ))
+        try fclose( fid );  
+        catch
+        end
         error( 'Currently LTspice2Matlab is only able to import results from Transient Analysis (.tran) and AC Analysis (.ac) simulations.' );
     end
 
-    if contains( lower(raw_data.flags), 'fastaccess' ),
-        try fclose( fid );  catch end
+    if contains( lower(raw_data.flags), 'fastaccess' )
+        try fclose( fid );  
+        catch
+        end
         error( 'LTspice2Matlab cannot convert files saved in the "Fast Access" format.' );
     end
-    if strcmpi(simulation_type, '.tran') & ~contains( lower(raw_data.flags), 'real' ),
-        try fclose( fid );  catch end
+    if strcmpi(simulation_type, '.tran') & ~contains( lower(raw_data.flags), 'real' )
+        try fclose( fid );  
+        catch
+        end
         error( 'Expected to find "real" flag for a Transient Analysis (.tran) simulation.  Unsure how to convert the data' );
     end
-    if strcmpi(simulation_type, '.tran') & ~contains( lower(raw_data.flags), 'forward' ),
-        try fclose( fid );  catch end
+    if strcmpi(simulation_type, '.tran') & ~contains( lower(raw_data.flags), 'forward' )
+        try fclose( fid );  
+        catch
+        end
         error( 'Expected to find "forward" flag for a Transient Analysis (.tran) simulation.  Unsure how to convert the data' );
     end
     
-    if strcmpi(simulation_type, '.ac') & ~contains( lower(raw_data.flags), 'complex' ),
-        try fclose( fid );  catch end
+    if strcmpi(simulation_type, '.ac') & ~contains( lower(raw_data.flags), 'complex' )
+        try fclose( fid );  
+        catch
+        end
         error( 'Expected to find "complex" flag for an AC Analysis (.ac) simulation.  Unsure how to convert the data' );
     end
-    if strcmpi(simulation_type, '.ac') & ~contains( lower(raw_data.flags), 'forward' ),
-        try fclose( fid );  catch end
+    if strcmpi(simulation_type, '.ac') & ~contains( lower(raw_data.flags), 'forward' )
+        try fclose( fid );  
+        catch
+        end
         error( 'Expected to find "forward" flag for an AC Analysis (.ac) simulation.  Unsure how to convert the data' );
     end
     if isfield( raw_data, 'flags' ),  raw_data = rmfield( raw_data, 'flags' );  end
 
     
-    if ischar(selected_vars),
+    if ischar(selected_vars)
         if strcmpi(selected_vars, 'all') | strcmpi(selected_vars, 'everything') | strcmpi(selected_vars, 'complete') | strcmpi(selected_vars, 'all variables') | ...
-                strcmpi(selected_vars, 'all vars') | strcmpi(selected_vars, 'every thing') | strcmpi(selected_vars, 'every'),  
+                strcmpi(selected_vars, 'all vars') | strcmpi(selected_vars, 'every thing') | strcmpi(selected_vars, 'every')  
             selected_vars = 1:raw_data.num_variables;     %Return all variables
         else
-            try fclose( fid );  catch end
+            try fclose( fid );  
+            catch
+            end
             error( 'Bad value for optional input parameter SELECTED_VARS' );
         end
     end
@@ -310,25 +334,35 @@ function raw_data = LTspice2Matlab( filename, varargin )
         raw_data.selected_vars = [];
         raw_data.variable_mat = [];
         raw_data.time_vect = [];
-        try fclose( fid );  catch end
+        try fclose( fid );  
+        catch
+        end
         return;
     end
     if size(selected_vars,1)>1 & size(selected_vars,2)>1,  
-        try fclose( fid );  catch end
+        try fclose( fid );  
+        catch
+        end
         error( 'SELECTED_VARS must be a row or column vector, not a matrix' );  
     end
-    if ~isempty(find(selected_vars==0, 1)),  
-        try fclose( fid );  catch end
+    if ~isempty(find(selected_vars==0, 1))  
+        try fclose( fid );  
+        catch
+        end
         error( 'The time vector (index 0) is returned separately.  \n   Values in input parameter SELECTED_VARS must be positive integers >= 1 and <= NUM_VARIABLES' );  
     end
     non_integer_index = find(isnan(selected_vars) | ~isnumeric(selected_vars) | mod( selected_vars, 1 )~=0.0, 1);
-    if ~isempty(non_integer_index),  
-        try fclose( fid );  catch end
+    if ~isempty(non_integer_index)  
+        try fclose( fid );  
+        catch
+        end
         error( 'Values in input parameter SELECTED_VARS must be positive integers >= 1 and <= NUM_VARIABLES' );  
     end
     missing_index = find( ~ismember( selected_vars, 1:raw_data.num_variables ), 1 );
-    if ~isempty(missing_index),  
-        try fclose( fid );  catch end
+    if ~isempty(missing_index)  
+        try fclose( fid );  
+        catch
+        end
         error( 'Error in input parameter SELECTED_VARS ... Out of range value(s) found' );  
     end
     
@@ -343,15 +377,16 @@ function raw_data = LTspice2Matlab( filename, varargin )
     
     
     %READ IN THE ACTUAL WAVEFORM DATA
-    if strcmpi(file_format, 'binary'),
+    if strcmpi(file_format, 'binary')
         binary_start = ftell(fid);   %start of binary data section.
+        binary_start = ceil(binary_start/2) * 2;
         
-        if strcmpi( simulation_type, '.tran' ),
+        if strcmpi( simulation_type, '.tran' ) || strcmpi( simulation_type, '.noise' )
             % For Transient Analysis simulations, the time data is stored in double precision floating point binary format, 
             % and everything else is stored in single precision format. 
 
             %Extract the binary data in the fewest possible number of contiguous blocks
-            if length(selected_vars)>1,
+            if length(selected_vars)>1
                 g_border = find( [2, diff(selected_vars), 2]~=1 );
                 block_list = {};
                 for k=1:length(g_border)-1,  block_list{k} = g_border(k):(g_border(k+1)-1);  end
@@ -360,7 +395,7 @@ function raw_data = LTspice2Matlab( filename, varargin )
             end
 
             raw_data.variable_mat = zeros(length(selected_vars), NumPnts_DS);  %Initialize.
-            for k=1:length(block_list),
+            for k=1:length(block_list)
                 target_var_index = selected_vars(block_list{k});
                 fseek(fid, binary_start + (target_var_index(1)+1)*4, 'bof'); 
                 TVIL = length(target_var_index);
@@ -374,12 +409,12 @@ function raw_data = LTspice2Matlab( filename, varargin )
             if downsamp_N==1,  raw_data.conversion_notes = 'Converted from Binary format';
             else raw_data.conversion_notes = sprintf( 'Converted from Binary format.  Downsampled from %.0f to %.0f points', NumPnts, NumPnts_DS );  end
             
-        elseif strcmpi( simulation_type, '.ac' ),
-            % For AC Analysis simulations, the frequency data is stored in double precision floating point binary format (8 bytes),
+        elseif strcmpi( simulation_type, '.ac' )
+            % For AC Analysis simulations, the frequency data is stored in double precision floating point binary format (8 bytes)
             % and the variables are stored as complex double precision arrays (8 bytes real followed by 8 bytes imag)
             
             %Extract the binary data in the fewest possible number of contiguous blocks
-            if length(selected_vars)>1,
+            if length(selected_vars)>1
                 g_border = find( [2, diff(selected_vars), 2]~=1 );
                 block_list = {};
                 for k=1:length(g_border)-1,  block_list{k} = g_border(k):(g_border(k+1)-1);  end
@@ -389,7 +424,7 @@ function raw_data = LTspice2Matlab( filename, varargin )
 
             raw_data.variable_mat = zeros(length(selected_vars), NumPnts_DS);  %Initialize.
             if numel(raw_data.variable_mat)~=0,  raw_data.variable_mat(1,1) = 0.0 + j*0.0;  end  %Allocate memory for complex double.
-            for k=1:length(block_list),
+            for k=1:length(block_list)
                 target_var_index = selected_vars(block_list{k});
                 fseek(fid, binary_start + target_var_index(1)*16, 'bof'); 
                 TVIL = length(target_var_index);
@@ -404,23 +439,25 @@ function raw_data = LTspice2Matlab( filename, varargin )
             raw_data.freq_vect = fread( fid, NumPnts_DS, 'double', (NumVars-1)*16 + 8 + (downsamp_N-1)*NumVars*16, machineformat ).';
             
         else
-            try fclose( fid );  catch end
-            error( sprintf('Simulation type (%s) not currently supported', simulation_type ));
+            try fclose( fid );  
+            catch
+            end
+            error('Simulation type (%s) not currently supported', simulation_type );
         end
         
         
-    elseif strcmpi(file_format, 'ascii' ),
+    elseif strcmpi(file_format, 'ascii' )
         
-        if strcmpi( simulation_type, '.tran' ) | strcmpi( simulation_type, '.noise' ),
+        if strcmpi( simulation_type, '.tran' ) | strcmpi( simulation_type, '.noise' )
             %Format:  point number, time value, var1, var2, var3 ... varN
             raw_data.variable_mat = fscanf( fid, '%g', [raw_data.num_variables+2, raw_data.num_data_pnts] );   %matrix is filled in column order.
-            if (size(raw_data.variable_mat,1)~=raw_data.num_variables+2) | (size(raw_data.variable_mat,2)~=raw_data.num_data_pnts),
-                error( sprintf('Format error in ASCII Transient Analysis LTspice file "%s" ... Incorrect number of data values read', filename ));
+            if (size(raw_data.variable_mat,1)~=raw_data.num_variables+2) | (size(raw_data.variable_mat,2)~=raw_data.num_data_pnts)
+                error('Format error in ASCII Transient Analysis LTspice file "%s" ... Incorrect number of data values read', filename );
             end
             raw_data.time_vect = raw_data.variable_mat(2,1:downsamp_N:end);
             raw_data.variable_mat = raw_data.variable_mat(2+selected_vars,1:downsamp_N:end);
             
-        elseif strcmpi( simulation_type, '.ac' ),
+        elseif strcmpi( simulation_type, '.ac' )
             %Format:  point number, freq value, 0, var1 real, var1 imag, var2 real, var2 imag, var3 real, var3 imag ... varN real, varN imag
             all_data = fread( fid, inf, 'uchar' );
             all_data(  all_data == ','  ) = sprintf( '\t' );  %Replace commas with tab characters
@@ -428,31 +465,37 @@ function raw_data = LTspice2Matlab( filename, varargin )
             clear all_data;
             %raw_data.variable_mat = fscanf( fid, '%g', [3+2*raw_data.num_variables, raw_data.num_data_pnts] );   %matrix is filled in column order.
             
-            if (size(raw_data.variable_mat,1)~=(3+2*raw_data.num_variables)) | (size(raw_data.variable_mat,2)~=raw_data.num_data_pnts),
-                error( sprintf('Format error in ASCII AC Analysis LTspice file "%s" ... Incorrect number of data values read', filename ));
+            if (size(raw_data.variable_mat,1)~=(3+2*raw_data.num_variables)) | (size(raw_data.variable_mat,2)~=raw_data.num_data_pnts)
+                error('Format error in ASCII AC Analysis LTspice file "%s" ... Incorrect number of data values read', filename );
             end
             raw_data.freq_vect = raw_data.variable_mat(2,1:downsamp_N:end);
             raw_data.variable_mat = raw_data.variable_mat(3+selected_vars*2-1,1:downsamp_N:end) + j*raw_data.variable_mat(3+selected_vars*2,1:downsamp_N:end);
             
         else
-            try fclose( fid );  catch end
-            error( sprintf('Simulation type (%s) not currently supported', simulation_type ));
+            try fclose( fid );  
+            catch
+            end
+            error('Simulation type (%s) not currently supported', simulation_type );
         end
         
         if downsamp_N==1,  raw_data.conversion_notes = 'Converted from ASCII format';
         else raw_data.conversion_notes = sprintf( 'Converted from ASCII format.  Downsampled from %.0f to %.0f points', NumPnts, NumPnts_DS );  end
         
     else
-        try fclose( fid );  catch end
-        error( sprintf('Format error in LTspice file "%s" ... Data type ID tag not found', filename ));
+        try fclose( fid );  
+        catch
+        end
+        error('Format error in LTspice file "%s" ... Data type ID tag not found', filename );
     end
 
-    try fclose( fid );  catch end
+    try fclose( fid );  
+    catch
+    end
     
     
     
     %Deal with potential compression in Transient Analysis simulations
-    if strcmpi( simulation_type, '.tran' ) & (min(diff(raw_data.time_vect)) < 0.0),   %Check to see if the time vector is monotonically increasing.
+    if strcmpi( simulation_type, '.tran' ) & (min(diff(raw_data.time_vect)) < 0.0)   %Check to see if the time vector is monotonically increasing.
         
         if downsamp_N~=1,  %If we have already downsampled then we can't uncompress.
             raw_data.time_vect = abs(raw_data.time_vect);            
@@ -493,7 +536,7 @@ function raw_data = LTspice2Matlab( filename, varargin )
             clear x_new x1sqr x2sqr x3sqr x1 x2 x3 denom r1 r2;
 
             raw_data.variable_mat(:,end+1:length(time_vect_new)) = 0.0;   %Init the memory
-            for k=1:size(raw_data.variable_mat,1),
+            for k=1:size(raw_data.variable_mat,1)
                 y_vect = raw_data.variable_mat(k,1:length(raw_data.time_vect));
                 raw_data.variable_mat(k,old_index) = y_vect;
                 y_new = repmat(y_vect(neg_pnt_index-1),[4,1]).*p1  +  repmat(y_vect(neg_pnt_index),[4,1]).*p2  +  repmat(y_vect(neg_pnt_index+1),[4,1]).*p3;

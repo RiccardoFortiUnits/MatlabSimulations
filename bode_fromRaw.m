@@ -1,10 +1,13 @@
-function bode_fromRaw(f, H)
+function [amplitude_dB, angle_deg] =  bode_fromRaw(f, H)
     % Calculate the magnitude and phase
     magnitude = abs(H);
-    phase = unwrap(angle(H));
+    phase = angle(H);
     
     % Convert the phase to degrees
-    phase = phase * (180/pi);
+    angle_deg = phase * (180/pi);
+
+
+    amplitude_dB = 20*log10(magnitude);
     
     % Create a new figure
     figure;
@@ -16,16 +19,16 @@ function bode_fromRaw(f, H)
     xlabel('Frequency (Hz)');
     ylabel('Magnitude (dB)');
     xlim([min(f), max(f)]);
-    ylim([min(20*log10(magnitude)), max(20*log10(magnitude))]);
     grid on;
     
     % Plot the phase
     subplot(2, 1, 2);  % Divide the window into 2 rows, 1 column, and select the second section
-    semilogx(f, phase);
+    semilogx(f, angle_deg);
     xlabel('Frequency (Hz)');
     ylabel('Phase (degrees)');
     grid on;
     xlim([min(f), max(f)]);
-    ylim([min(phase), max(phase)]);
     hold off;
+
+    
 end
