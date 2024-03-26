@@ -2,3 +2,22 @@
 slprj/
 
 *.asv
+
+filename.mcsv
+
+oneRow.wfm
+
+
+tia3_controller.slx.autosave
+
+test_PidWithIntrinsicOffset.slx
+
+test_feedbackWithDelay.slx
+
+test_feedbackWithDelay.slxc
+
+Laser_n_PID.slxc
+
+dcAttenuationFilter.m
+
+generateFilterForRedpitayaGenericFilter.m

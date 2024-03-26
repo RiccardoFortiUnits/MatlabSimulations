@@ -3,7 +3,7 @@ P = 1;
 I = 0.003;
 setPoint = -0.87;
 fsampling = 125e6;
-nDelay = ceil(350*.25);
+nDelay = ceil(350*.15);
 
 initialWaitTime = 8e-4;
 
@@ -19,6 +19,10 @@ fNoiseSampling = 1 / (rpFloor(2,1) - rpFloor(1,1));
 tia3_C_feedback = 10e-12;
 tia3_g1 = 20e3;
 tia3_g2 = 4.9;
+tia4_g1 = 5.9259;
+tia4_g2 = 4.9;
+tia4_g_rp = 10.6667;
+
 
 % 
 % sim('tia3_controller.slx');
